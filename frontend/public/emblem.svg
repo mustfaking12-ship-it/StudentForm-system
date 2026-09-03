@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Iraqi Republic / Ministry Emblem Stylized Badge -->
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6d365" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="100%" stop-color="#aa771c" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b2545" />
+      <stop offset="100%" stop-color="#133b5c" />
+    </linearGradient>
+  </defs>
+  <!-- Outer Gold Laurel Circle -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" stroke-dasharray="4 2" />
+  <circle cx="50" cy="50" r="42" fill="url(#shieldGrad)" stroke="#d4af37" stroke-width="1.5" />
+  
+  <!-- Crown / Star -->
+  <path d="M50 16 L53 23 L60 23 L54.5 27 L57 34 L50 29.5 L43 34 L45.5 27 L40 23 L47 23 Z" fill="url(#goldGrad)" />
+
+  <!-- Open Book (Education) -->
+  <path d="M50 48 C44 42, 30 42, 22 46 L22 68 C30 64, 44 64, 50 70 C56 64, 70 64, 78 68 L78 46 C70 42, 56 42, 50 48 Z" fill="#ffffff" opacity="0.95" />
+  <line x1="50" y1="48" x2="50" y2="70" stroke="#0b2545" stroke-width="2" />
+  <path d="M26 52 C34 49, 44 50, 48 53" fill="none" stroke="#d4af37" stroke-width="1.2" />
+  <path d="M26 58 C34 55, 44 56, 48 59" fill="none" stroke="#d4af37" stroke-width="1.2" />
+  <path d="M74 52 C66 49, 56 50, 52 53" fill="none" stroke="#d4af37" stroke-width="1.2" />
+  <path d="M74 58 C66 55, 56 56, 52 59" fill="none" stroke="#d4af37" stroke-width="1.2" />
+
+  <!-- Torch of knowledge in center -->
+  <path d="M48 38 L52 38 L51 46 L49 46 Z" fill="url(#goldGrad)" />
+  <path d="M50 33 C52 35, 53 37, 50 38 C47 37, 48 35, 50 33 Z" fill="#e63946" />
+
+  <!-- Bottom Ribbon -->
+  <path d="M20 78 Q50 86 80 78 L78 84 Q50 92 22 84 Z" fill="url(#goldGrad)" />
+  <circle cx="50" cy="85" r="3" fill="#0b2545" />
+</svg>

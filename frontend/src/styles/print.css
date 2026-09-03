@@ -1,0 +1,226 @@
+/* Official Iraqi Ministry A4 Printable Document Styles */
+
+.print-document-container {
+  background: #ffffff;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm 15mm;
+  box-shadow: var(--shadow-lg);
+  color: #000000;
+  direction: rtl;
+  font-family: 'Cairo', 'Tajawal', serif, sans-serif;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Official Double Border like the Ministry paper form */
+.print-border-frame {
+  border: 2px solid #000000;
+  padding: 4px;
+  min-height: calc(297mm - 24mm);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.print-inner-frame {
+  border: 1px dashed #000000;
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Header */
+.print-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.print-ministry-title {
+  font-size: 15pt;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.print-school-subtitle {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #222222;
+  margin-bottom: 8px;
+}
+
+.print-banner-box {
+  background-color: #0c2340 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  color: #ffffff !important;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 14pt;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.print-banner-box .code-badge {
+  background: #ffffff;
+  color: #0c2340;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10pt;
+  font-family: monospace;
+}
+
+/* Section Header in Print Form */
+.print-section-title {
+  font-size: 11pt;
+  font-weight: 800;
+  color: #000000;
+  border-bottom: 1.5px solid #000000;
+  padding-bottom: 2px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Print Form Table / Grid */
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 9.5pt;
+}
+
+.print-table th, .print-table td {
+  border: 1px solid #777777;
+  padding: 4px 7px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.print-table th {
+  background-color: #f1f5f9 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-weight: 700;
+  color: #111111;
+  white-space: nowrap;
+}
+
+.print-table .label-cell {
+  background-color: #f8fafc !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-weight: 700;
+  width: 16%;
+}
+
+.print-table .value-cell {
+  width: 34%;
+  font-weight: 500;
+}
+
+/* Single Quad Name Highlight Row */
+.print-quad-name-row {
+  background-color: #fdfdfd;
+  font-size: 11pt;
+}
+
+.print-quad-name-val {
+  font-weight: 800;
+  color: #000000;
+}
+
+/* Photo Frame on the Print Form */
+.print-photo-box {
+  width: 85px;
+  height: 105px;
+  border: 1.5px solid #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 8pt;
+  color: #555555;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.print-photo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Footer Signatures */
+.print-signatures-row {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1.5px solid #000000;
+  padding-top: 14px;
+  font-size: 9.5pt;
+  font-weight: 700;
+}
+
+.print-signature-col {
+  text-align: center;
+  min-width: 160px;
+}
+
+.print-signature-line {
+  margin-top: 35px;
+  border-top: 1px dotted #333333;
+  padding-top: 4px;
+}
+
+/* Exact A4 Print Media Rule */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide navigation, buttons, toast, footers */
+  .official-header,
+  .no-print,
+  .btn,
+  .toast-container,
+  .nav-actions {
+    display: none !important;
+  }
+
+  .main-content {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-document-container {
+    box-shadow: none !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+  }
+
+  .print-border-frame {
+    min-height: 275mm !important;
+  }
+}

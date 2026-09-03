@@ -1,0 +1,9 @@
+@import './styles/variables.css';
+@import './styles/main.css';
+@import './styles/print.css';
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
