@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: studentform-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    
+    # NOTE: To keep your SQLite database and Uploads permanently, 
+    # you MUST upgrade to the Render Starter plan ($7/mo) and uncomment the disk section below:
+    # disk:
+    #   name: data
+    #   mountPath: /opt/render/project/src/backend/database
+    #   sizeGB: 1
