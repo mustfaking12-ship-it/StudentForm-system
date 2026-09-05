@@ -17,7 +17,8 @@ import {
   parseExcelPreview,
   commitExcelImport,
   createFullBackup,
-  restoreFullBackup
+  restoreFullBackup,
+  syncAllWithCloud
 } from './storageService';
 import { getSettings, saveSettings } from './settingsService';
 
@@ -96,7 +97,8 @@ export const studentService = {
   create: (data) => createStudent(data),
   update: (id, data) => updateStudent(id, data),
   delete: (id) => deleteStudent(id),
-  checkDuplicate: (data) => checkStudentDuplicate(data)
+  checkDuplicate: (data) => checkStudentDuplicate(data),
+  syncWithCloud: () => syncAllWithCloud()
 };
 
 // Teacher & Staff Service

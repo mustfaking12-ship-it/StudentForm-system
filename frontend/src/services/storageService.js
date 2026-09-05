@@ -193,6 +193,33 @@ async function putInStore(storeName, fallbackKey, item) {
   });
 }
 
+// Helper: bulk put items in store
+async function putManyInStore(storeName, fallbackKey, items) {
+  if (!items || items.length === 0) return;
+  const db = await openIndexedDB();
+  if (!db) {
+    const raw = localStorage.getItem(fallbackKey);
+    const existing = raw ? JSON.parse(raw) : [];
+    const map = new Map();
+    existing.forEach((x) => map.set(x.id || x.code, x));
+    items.forEach((x) => map.set(x.id || x.code, x));
+    localStorage.setItem(fallbackKey, JSON.stringify(Array.from(map.values())));
+    return;
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      items.forEach((item) => store.put(item));
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
 // Helper: delete item from store
 async function deleteFromStore(storeName, fallbackKey, id) {
   const db = await openIndexedDB();
@@ -218,22 +245,44 @@ async function deleteFromStore(storeName, fallbackKey, id) {
   });
 }
 
+// Background sync tracking to avoid blocking page loads
+let isSyncingStudents = false;
+let isSyncingTeachers = false;
+
+function triggerBackgroundSync(type) {
+  if (type === 'students') {
+    if (isSyncingStudents) return;
+    isSyncingStudents = true;
+    fetchStudentsFromCloud()
+      .then((cloudStudents) => {
+        if (cloudStudents && cloudStudents.length > 0) {
+          putManyInStore(STUDENTS_STORE, LS_STUDENTS_KEY, cloudStudents);
+        }
+      })
+      .catch((err) => console.warn('Background student sync skipped:', err.message))
+      .finally(() => { isSyncingStudents = false; });
+  } else {
+    if (isSyncingTeachers) return;
+    isSyncingTeachers = true;
+    fetchTeachersFromCloud()
+      .then((cloudTeachers) => {
+        if (cloudTeachers && cloudTeachers.length > 0) {
+          putManyInStore(TEACHERS_STORE, LS_TEACHERS_KEY, cloudTeachers);
+        }
+      })
+      .catch((err) => console.warn('Background teacher sync skipped:', err.message))
+      .finally(() => { isSyncingTeachers = false; });
+  }
+}
+
 // ================= STUDENTS SERVICE ================= //
 
 export async function getStudents(params = {}) {
-  // Try cloud sync first if available
-  const cloudStudents = await fetchStudentsFromCloud();
-  let students = [];
+  // 1. Instant local read (0-10ms) without waiting for network
+  const students = await getAllFromStore(STUDENTS_STORE, LS_STUDENTS_KEY, INITIAL_STUDENTS);
 
-  if (cloudStudents && cloudStudents.length > 0) {
-    students = cloudStudents;
-    // Cache to local IndexedDB
-    for (const stu of students) {
-      await putInStore(STUDENTS_STORE, LS_STUDENTS_KEY, stu);
-    }
-  } else {
-    students = await getAllFromStore(STUDENTS_STORE, LS_STUDENTS_KEY, INITIAL_STUDENTS);
-  }
+  // 2. Trigger non-blocking cloud sync in background
+  triggerBackgroundSync('students');
 
   // Filter
   let filtered = [...students];
@@ -384,17 +433,11 @@ export async function checkStudentDuplicate(data) {
 // ================= TEACHERS SERVICE ================= //
 
 export async function getTeachers(params = {}) {
-  const cloudTeachers = await fetchTeachersFromCloud();
-  let teachers = [];
+  // 1. Instant local read (0-10ms)
+  const teachers = await getAllFromStore(TEACHERS_STORE, LS_TEACHERS_KEY, INITIAL_TEACHERS);
 
-  if (cloudTeachers && cloudTeachers.length > 0) {
-    teachers = cloudTeachers;
-    for (const tea of teachers) {
-      await putInStore(TEACHERS_STORE, LS_TEACHERS_KEY, tea);
-    }
-  } else {
-    teachers = await getAllFromStore(TEACHERS_STORE, LS_TEACHERS_KEY, INITIAL_TEACHERS);
-  }
+  // 2. Trigger non-blocking cloud sync in background
+  triggerBackgroundSync('teachers');
 
   let filtered = [...teachers];
 
@@ -836,3 +879,32 @@ export async function restoreFullBackup(jsonFile) {
     reader.readAsText(jsonFile);
   });
 }
+
+export async function syncAllWithCloud() {
+  try {
+    const [cloudStudents, cloudTeachers] = await Promise.all([
+      fetchStudentsFromCloud(),
+      fetchTeachersFromCloud()
+    ]);
+
+    if (cloudStudents && cloudStudents.length > 0) {
+      await putManyInStore(STUDENTS_STORE, LS_STUDENTS_KEY, cloudStudents);
+    }
+    if (cloudTeachers && cloudTeachers.length > 0) {
+      await putManyInStore(TEACHERS_STORE, LS_TEACHERS_KEY, cloudTeachers);
+    }
+
+    return {
+      success: true,
+      studentsCount: cloudStudents?.length || 0,
+      teachersCount: cloudTeachers?.length || 0,
+      message: 'تمت المزامنة مع السحابة بنجاح'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || 'فشلت المزامنة السحابية'
+    };
+  }
+}
+

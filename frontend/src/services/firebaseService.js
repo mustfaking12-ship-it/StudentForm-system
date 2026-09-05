@@ -57,18 +57,25 @@ export async function syncStudentToCloud(student) {
   }
 }
 
+function withTimeout(promise, ms = 3500) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase timeout')), ms))
+  ]);
+}
+
 export async function fetchStudentsFromCloud() {
   const db = getFirestoreDB();
   if (!db) return null;
   try {
     const colRef = collection(db, 'students');
     const q = query(colRef, orderBy('code', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await withTimeout(getDocs(q), 3500);
     const list = [];
     snapshot.forEach((d) => list.push({ id: d.id, ...d.data() }));
     return list;
   } catch (err) {
-    console.error('Error fetching students from Firestore:', err);
+    console.warn('Skipping cloud sync (timeout or offline):', err.message);
     return null;
   }
 }
@@ -78,10 +85,10 @@ export async function syncTeacherToCloud(teacher) {
   if (!db) return false;
   try {
     const docRef = doc(db, 'teachers', String(teacher.code || teacher.id));
-    await setDoc(docRef, {
+    await withTimeout(setDoc(docRef, {
       ...teacher,
       updated_at: serverTimestamp()
-    }, { merge: true });
+    }, { merge: true }), 3500);
     return true;
   } catch (err) {
     console.error('Error syncing teacher to Firestore:', err);
@@ -95,12 +102,12 @@ export async function fetchTeachersFromCloud() {
   try {
     const colRef = collection(db, 'teachers');
     const q = query(colRef, orderBy('code', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await withTimeout(getDocs(q), 3500);
     const list = [];
     snapshot.forEach((d) => list.push({ id: d.id, ...d.data() }));
     return list;
   } catch (err) {
-    console.error('Error fetching teachers from Firestore:', err);
+    console.warn('Skipping teacher cloud sync (timeout or offline):', err.message);
     return null;
   }
 }

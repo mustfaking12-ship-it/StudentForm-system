@@ -41,6 +41,19 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncingCloud, setSyncingCloud] = useState(false);
+
+  const handleManualSync = async () => {
+    setSyncingCloud(true);
+    try {
+      await studentService.syncWithCloud();
+      await fetchRecords();
+    } catch (e) {
+      console.error('Manual sync error:', e);
+    } finally {
+      setSyncingCloud(false);
+    }
+  };
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -128,6 +141,17 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={handleManualSync}
+            disabled={syncingCloud}
+            className="btn btn-sm btn-secondary"
+            title="مزامنة فورية مع السحابة لجلب أي استمارات جديدة"
+          >
+            <RefreshCw size={15} className={syncingCloud ? 'animate-spin' : ''} />
+            {syncingCloud ? 'جاري المزامنة...' : 'مزامنة السحابة'}
+          </button>
+
           <button
             type="button"
             onClick={() => importExportService.exportExcel(activeTab === 'students' ? 'students' : 'teachers')}
