@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck, LogIn, LogOut, LayoutDashboard, FileText, Users, Home } from 'lucide-react';
+import { ShieldCheck, LogIn, LogOut, LayoutDashboard, FileText, Users, Home, Settings } from 'lucide-react';
 import { getUser, authService } from '../../services/api';
 
-export default function Header({ currentView, setCurrentView, onOpenLogin }) {
+export default function Header({ currentView, setCurrentView, onOpenLogin, onOpenSettings }) {
   const user = getUser();
 
   const handleLogout = () => {
@@ -66,6 +66,15 @@ export default function Header({ currentView, setCurrentView, onOpenLogin }) {
               >
                 <FileText size={16} />
                 الاستيراد والتصدير
+              </button>
+
+              <button
+                className="btn btn-sm btn-outline-light"
+                onClick={onOpenSettings}
+                title="إعدادات النظام والتيليجرام"
+              >
+                <Settings size={16} />
+                الإعدادات
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>

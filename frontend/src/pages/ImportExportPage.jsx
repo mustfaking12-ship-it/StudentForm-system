@@ -7,7 +7,9 @@ import {
   AlertTriangle,
   FileCheck,
   RefreshCw,
-  Info
+  Info,
+  Database,
+  Archive
 } from 'lucide-react';
 import { importExportService } from '../services/api';
 
@@ -19,7 +21,31 @@ export default function ImportExportPage() {
   const [committing, setCommitting] = useState(false);
   const [commitResult, setCommitResult] = useState(null);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [backupStatus, setBackupStatus] = useState(null);
   const fileInputRef = useRef(null);
+  const backupInputRef = useRef(null);
+
+  const handleCreateBackup = async () => {
+    try {
+      await importExportService.createBackup();
+      setBackupStatus({ success: true, message: 'تم تحميل ملف النسخة الاحتياطية بنجاح' });
+    } catch (err) {
+      setBackupStatus({ success: false, message: err.message });
+    }
+  };
+
+  const handleRestoreBackup = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBackupStatus({ loading: true, message: 'جاري استعادة النسخة الاحتياطية...' });
+    try {
+      const res = await importExportService.restoreBackup(file);
+      setBackupStatus({ success: true, message: res.message });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      setBackupStatus({ success: false, message: err.message || 'فشل استعادة النسخة الاحتياطية' });
+    }
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -105,24 +131,15 @@ export default function ImportExportPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <a
-              href={importExportService.getExportUrl('students', 'xlsx')}
+            <button
+              type="button"
+              onClick={() => importExportService.exportExcel('students')}
               className="btn btn-primary btn-sm"
               style={{ flex: 1 }}
-              download
             >
               <Download size={15} />
-              تصدير Excel (.xlsx)
-            </a>
-            <a
-              href={importExportService.getExportUrl('students', 'csv')}
-              className="btn btn-secondary btn-sm"
-              style={{ flex: 1 }}
-              download
-            >
-              <Download size={15} />
-              تصدير CSV (.csv)
-            </a>
+              تصدير سجل الطالبات (.xlsx)
+            </button>
           </div>
         </div>
 
@@ -143,24 +160,15 @@ export default function ImportExportPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <a
-              href={importExportService.getExportUrl('teachers', 'xlsx')}
+            <button
+              type="button"
+              onClick={() => importExportService.exportExcel('teachers')}
               className="btn btn-gold btn-sm"
               style={{ flex: 1 }}
-              download
             >
               <Download size={15} />
-              تصدير Excel (.xlsx)
-            </a>
-            <a
-              href={importExportService.getExportUrl('teachers', 'csv')}
-              className="btn btn-secondary btn-sm"
-              style={{ flex: 1 }}
-              download
-            >
-              <Download size={15} />
-              تصدير CSV (.csv)
-            </a>
+              تصدير سجل الملاكات (.xlsx)
+            </button>
           </div>
         </div>
       </div>
@@ -328,6 +336,67 @@ export default function ImportExportPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Section 3: Full System Backup & Restore */}
+      <div className="section-header" style={{ marginTop: '2.5rem', marginBottom: '1.25rem' }}>
+        <div className="section-title">
+          <Database size={20} />
+          <span>ثالثاً: النسخ الاحتياطي الشامل للنظام (Backup & Restore)</span>
+        </div>
+        <span className="section-badge" style={{ background: '#fef3c7', color: '#b45309' }}>
+          حفظ ونقل البيانات بالكامل
+        </span>
+      </div>
+
+      <div className="form-card" style={{ padding: '1.75rem' }}>
+        <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          يمكنك تنزيل نسخة احتياطية مشفرة بملف واحد (JSON) تحتوي على كل سجلات الطالبات والمعلمات والإعدادات لنقلها لحاسوب آخر، أو حفظها في فلاش ميموري للرجوع إليها في أي وقت.
+        </p>
+
+        {backupStatus && (
+          <div style={{
+            marginBottom: '1.25rem',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            background: backupStatus.success ? '#dcfce7' : backupStatus.loading ? '#eff6ff' : '#fee2e2',
+            color: backupStatus.success ? '#15803d' : backupStatus.loading ? '#1d4ed8' : '#b91c1c'
+          }}>
+            {backupStatus.message}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleCreateBackup}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Download size={16} />
+            تحميل نسخة احتياطية كاملة (Backup JSON)
+          </button>
+
+          <input
+            type="file"
+            ref={backupInputRef}
+            onChange={handleRestoreBackup}
+            accept=".json"
+            style={{ display: 'none' }}
+          />
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => backupInputRef.current?.click()}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Archive size={16} />
+            استعادة نسخة احتياطية من ملف
+          </button>
+        </div>
       </div>
     </div>
   );

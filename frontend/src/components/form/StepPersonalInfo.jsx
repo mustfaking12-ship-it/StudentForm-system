@@ -2,7 +2,7 @@ import React from 'react';
 import InputField from '../common/InputField';
 import SelectField from '../common/SelectField';
 import QuadNameInput from '../common/QuadNameInput';
-import PhotoUploader from '../common/PhotoUploader';
+
 
 const IRAQ_PROVINCES = [
   'بغداد', 'البصرة', 'نينوى', 'أربيل', 'النجف الأشرف', 'كربلاء المقدسة',
@@ -22,13 +22,23 @@ export default function StepPersonalInfo({ formData, onChange, errors = {}, isTe
         <span className="section-badge">مطلوب للتحقق</span>
       </div>
 
-      {/* Profile Photo Uploader */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <PhotoUploader
-          value={formData.photo_url}
-          onChange={(url) => onChange('photo_url', url)}
-          label="الصورة الشخصية الرسمية (خلفية بيضاء يفضل)"
-        />
+      {/* Official Photo Notice (No digital upload required) */}
+      <div style={{
+        background: '#f8fafc',
+        border: '1px dashed #cbd5e1',
+        borderRadius: '8px',
+        padding: '0.85rem 1.25rem',
+        marginBottom: '1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        fontSize: '0.88rem',
+        color: '#475569'
+      }}>
+        <span style={{ fontSize: '1.25rem' }}>📷</span>
+        <span>
+          <strong>الصورة الشخصية:</strong> لا يتطلب النظام رفع صورة إلكترونياً؛ تُرفق وتُثبت الصورة الورقية الملونة ذات الخلفية البيضاء على الاستمارة بعد الطباعة الرسمية.
+        </span>
       </div>
 
       <div className="grid-2">

@@ -13,12 +13,14 @@ import ImportExportPage from './pages/ImportExportPage';
 import StudentPrintA4 from './components/print/StudentPrintA4';
 import TeacherPrintA4 from './components/print/TeacherPrintA4';
 import EditRecordModal from './components/common/EditRecordModal';
+import SettingsModal from './components/common/SettingsModal';
 import { getUser, studentService, teacherService } from './services/api';
 import './styles/main.css';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('landing');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [user, setUser] = useState(getUser());
   const [toasts, setToasts] = useState([]);
 
@@ -119,6 +121,7 @@ export default function App() {
         currentView={currentView}
         setCurrentView={setCurrentView}
         onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -229,6 +232,15 @@ export default function App() {
         onSaveSuccess={(updated) => {
           addToast('تم تحديث بيانات السجل بنجاح', 'success', 'تحديث السجل');
           setCurrentRecord(updated);
+        }}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSaveSuccess={() => {
+          addToast('تم حفظ إعدادات النظام بنجاح', 'success', 'الإعدادات');
         }}
       />
 
