@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Trash2, Upload, User, Loader2 } from 'lucide-react';
-import { uploadService } from '../../services/api';
+import { uploadService, getFileUrl } from '../../services/api';
 
 export default function PhotoUploader({ value, onChange, label = 'الصورة الشخصية للمعاملة' }) {
   const [uploading, setUploading] = useState(false);
@@ -56,7 +56,7 @@ export default function PhotoUploader({ value, onChange, label = 'الصورة �
       <div className="photo-uploader-box">
         <div className="photo-preview-frame">
           {value ? (
-            <img src={value} alt="معاينة الصورة" />
+            <img src={getFileUrl(value)} alt="معاينة الصورة" />
           ) : (
             <div style={{ textAlign: 'center', color: '#94a3b8' }}>
               <User size={42} strokeWidth={1.5} />

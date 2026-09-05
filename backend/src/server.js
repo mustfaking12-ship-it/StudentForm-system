@@ -78,6 +78,16 @@ app.use('/api/teachers', require('./routes/teacherRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/data', require('./routes/importExportRoutes'));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    message: 'خادم نظام مدرسة المتفوقات الأولى للبنات يعمل بنجاح!',
+    api: '/api',
+    health: '/api/health'
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
