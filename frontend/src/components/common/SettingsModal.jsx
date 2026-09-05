@@ -23,14 +23,14 @@ export default function SettingsModal({ isOpen, onClose, onSaveSuccess }) {
 
   const handleSave = (e) => {
     e.preventDefault();
-    const res = saveSettings(settings);
+    const res = saveSettings(settings, true);
     if (res.success) {
       resetFirebaseInstance();
-      setSaveStatus({ success: true, message: 'تم حفظ كافة الإعدادات بنجاح!' });
+      setSaveStatus({ success: true, message: 'تم حفظ كافة الإعدادات بنجاح ومزامنتها سحابياً لجميع الطلاب!' });
       setTimeout(() => {
         if (onSaveSuccess) onSaveSuccess();
         onClose();
-      }, 1200);
+      }, 1500);
     } else {
       setSaveStatus({ success: false, message: res.message || 'فشل حفظ الإعدادات' });
     }
@@ -283,8 +283,9 @@ export default function SettingsModal({ isOpen, onClose, onSaveSuccess }) {
                 color: '#166534',
                 lineHeight: 1.6
               }}>
-                ☁️ <strong>المزامنة السحابية (اختيارية):</strong><br />
-                النظام يحفظ البيانات في المتصفح المحلي حالياً. إذا رغبت بمزامنة الاستمارات سحابياً بين جميع هواتف الطلاب وحاسوبك فورياً، يمكنك إدخال مفاتيح مشروعك المجاني من <b>Google Firebase Console</b>.
+                ✅ <strong>المزامنة السحابية المركزية (Firebase Firestore):</strong><br />
+                النظام مربوط ومفعل الآن على مشروعك السحابي: <b>schoolinfo-7abbc</b>.<br />
+                جميع استمارات الطلاب التي تُملأ من أي هاتف أو متصفح يتم حفظها فورياً في السحابة وتظهر مباشرة في لوحة التحكم (الداشبورد).
               </div>
 
               <div>
@@ -294,7 +295,7 @@ export default function SettingsModal({ isOpen, onClose, onSaveSuccess }) {
                 <input
                   type="text"
                   dir="ltr"
-                  placeholder="مثال: my-school-emis-123"
+                  placeholder="schoolinfo-7abbc"
                   value={settings.firebaseConfig?.projectId || ''}
                   onChange={(e) => setSettings({
                     ...settings,

@@ -1,8 +1,18 @@
 import React from 'react';
 import { ShieldCheck, LogIn, LogOut, LayoutDashboard, FileText, Users, Home, Settings } from 'lucide-react';
 import { getUser, authService } from '../../services/api';
+import NotificationBell from '../common/NotificationBell';
 
-export default function Header({ currentView, setCurrentView, onOpenLogin, onOpenSettings }) {
+export default function Header({ 
+  currentView, 
+  setCurrentView, 
+  onOpenLogin, 
+  onOpenSettings,
+  notifications = [],
+  onMarkAllAsRead,
+  onClearAllNotifications,
+  onViewRecord
+}) {
   const user = getUser();
 
   const handleLogout = () => {
@@ -77,17 +87,25 @@ export default function Header({ currentView, setCurrentView, onOpenLogin, onOpe
                 الإعدادات
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
-                <span style={{ fontSize: '0.82rem', color: '#f6d365', fontWeight: 'bold' }}>
-                  {user.full_name || user.username}
+              <NotificationBell
+                notifications={notifications}
+                onMarkAllAsRead={onMarkAllAsRead}
+                onClearAll={onClearAllNotifications}
+                onViewRecord={onViewRecord}
+              />
+
+              <div className="user-profile-badge">
+                <span className="user-name" title={user.full_name || user.username}>
+                  {user.role === 'ADMIN' ? 'مدير النظام' : (user.full_name || user.username)}
                 </span>
                 <button
                   className="btn btn-sm btn-danger"
                   onClick={handleLogout}
                   title="تسجيل الخروج"
+                  style={{ height: '30px', padding: '0 0.55rem', borderRadius: '6px' }}
                 >
-                  <LogOut size={15} />
-                  خروج
+                  <LogOut size={13} />
+                  <span>خروج</span>
                 </button>
               </div>
             </>

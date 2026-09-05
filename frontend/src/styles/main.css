@@ -65,46 +65,51 @@ button, input, select, textarea {
 }
 
 .header-main-nav {
-  max-width: 1280px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 0.7rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .school-brand {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.85rem;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .school-emblem {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .brand-text h1 {
-  font-size: 1.25rem;
+  font-size: 1.18rem;
   font-weight: 800;
   letter-spacing: -0.3px;
   color: #ffffff;
   margin: 0;
+  white-space: nowrap;
 }
 
 .brand-text p {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #cbd5e1;
   margin: 0;
+  white-space: nowrap;
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 /* Buttons */
@@ -112,15 +117,18 @@ button, input, select, textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px solid transparent;
   text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .btn-primary {
@@ -181,8 +189,36 @@ button, input, select, textarea {
 }
 
 .btn-sm {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.84rem;
+  height: 38px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.user-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 0.2rem 0.35rem 0.2rem 0.75rem;
+  height: 38px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 0.25rem;
+}
+
+.user-profile-badge .user-name {
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #f6d365;
+  white-space: nowrap;
 }
 
 .btn-lg {
@@ -748,3 +784,62 @@ button, input, select, textarea {
   background: var(--primary-faint);
   color: var(--primary);
 }
+
+/* Notification Animations */
+@keyframes bellSwing {
+  0% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  75% { transform: rotate(4deg); }
+  85% { transform: rotate(-2deg); }
+  100% { transform: rotate(0); }
+}
+
+.bell-ringing {
+  animation: bellSwing 1.8s infinite;
+  transform-origin: top center;
+  color: #facc15;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+/* Responsive Header */
+@media (max-width: 1280px) {
+  .header-main-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+  }
+  .school-brand {
+    justify-content: center;
+  }
+  .nav-actions {
+    justify-content: center;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+

@@ -1,4 +1,39 @@
-import { getSettings } from './settingsService';
+import { getSettings, syncSettingsFromCloud } from './settingsService';
+
+/**
+ * Escapes special HTML characters for Telegram HTML parse_mode
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  if (str === null || str === undefined || str === '') return '-';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Helper to fetch token and chatId, attempting cloud sync if missing
+ */
+async function getTelegramCredentials() {
+  let settings = getSettings();
+  let token = settings.telegramBotToken?.trim();
+  let chatId = settings.telegramChatId?.trim();
+
+  if (!token || !chatId) {
+    try {
+      const refreshed = await syncSettingsFromCloud();
+      token = refreshed.telegramBotToken?.trim();
+      chatId = refreshed.telegramChatId?.trim();
+      settings = refreshed;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return { token, chatId, enabled: settings.telegramEnabled !== false };
+}
 
 /**
  * Sends a rich, formatted notification message to Telegram Bot
@@ -6,28 +41,41 @@ import { getSettings } from './settingsService';
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export async function sendTelegramStudentNotification(student) {
-  const settings = getSettings();
-  const token = settings.telegramBotToken?.trim();
-  const chatId = settings.telegramChatId?.trim();
+  const { token, chatId, enabled } = await getTelegramCredentials();
 
-  if (!token || !chatId || settings.telegramEnabled === false) {
+  if (!token || !chatId || !enabled) {
+    console.warn('[Telegram] Skipped: Bot token or Chat ID not configured');
     return { success: false, message: 'إعدادات التيليجرام غير مفعلة أو غير مكتملة' };
   }
 
-  const messageText = `
+  const guardianInfo = student.guardian_quad_name 
+    ? `${escapeHtml(student.guardian_quad_name)} (${escapeHtml(student.guardian_relationship || 'ولي الأمر')})`
+    : '-';
+
+  const address = [
+    student.province,
+    student.district,
+    student.neighborhood,
+    student.mahalla ? `م ${student.mahalla}` : '',
+    student.zuqaq ? `ز ${student.zuqaq}` : '',
+    student.house_no ? `دار ${student.house_no}` : ''
+  ].filter(Boolean).join(' - ') || '-';
+
+  const messageHtml = `
 🔔 <b>استمارة تسجيل قيد طالبة جديدة</b>
 🏫 <b>مدرسة المتفوقات الأولى للبنات</b>
 ━━━━━━━━━━━━━━━━━━
-👤 <b>اسم الطالبة الرباعي:</b> ${student.quad_name || '-'}
-🏷️ <b>الرمز الإلكتروني:</b> <code>${student.code || '-'}</code>
-👩 <b>اسم الأم:</b> ${student.mother_name || '-'}
-📅 <b>تاريخ التولد:</b> ${student.dob || '-'}
-🆔 <b>الرقم الوطني / الهوية:</b> ${student.national_id || student.id_number || '-'}
-📚 <b>الصف والمرحلة:</b> ${student.grade || '-'} (${student.section || 'الشعبة العامة'})
+👤 <b>اسم الطالبة:</b> ${escapeHtml(student.quad_name)}
+🏷️ <b>الرمز الإلكتروني:</b> <code>${escapeHtml(student.code)}</code>
+👩 <b>اسم الأم:</b> ${escapeHtml(student.mother_name)}
+📅 <b>تاريخ التولد:</b> ${escapeHtml(student.dob)}
+🆔 <b>الرقم الوطني / الهوية:</b> <code>${escapeHtml(student.national_id || student.id_number)}</code>
+📚 <b>الصف والمرحلة:</b> ${escapeHtml(student.grade)} (${escapeHtml(student.section || 'أ')})
 
-📞 <b>رقم هاتف ولي الأمر:</b> <code>${student.parent_phone || student.phone || '-'}</code>
-📍 <b>المحافظة والسكن:</b> ${student.province || 'بغداد'} - ${student.district || '-'} - ${student.neighborhood || '-'}
-━━━━━━━━━━━━━━━━━━
+👨‍👧 <b>ولي الأمر:</b> ${guardianInfo}
+📞 <b>هاتف ولي الأمر:</b> <code>${escapeHtml(student.guardian_phone || student.parent_phone || student.phone)}</code>
+📍 <b>السكن:</b> ${escapeHtml(address)}
+${student.has_special_needs ? `♿ <b>احتياجات خاصة:</b> ${escapeHtml(student.special_needs_type || 'نعم')}\n` : ''}━━━━━━━━━━━━━━━━━━
 ⏰ <i>تاريخ التقديم: ${new Date().toLocaleString('ar-IQ')}</i>
 `.trim();
 
@@ -38,20 +86,35 @@ export async function sendTelegramStudentNotification(student) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: messageText,
+        text: messageHtml,
         parse_mode: 'HTML'
       })
     });
 
     const data = await response.json();
     if (data.ok) {
+      console.log('[Telegram] Student notification sent successfully');
       return { success: true, message: 'تم إرسال إشعار التيليجرام بنجاح' };
     } else {
-      console.warn('Telegram API error:', data);
-      return { success: false, message: data.description || 'فشل إرسال رسالة التيليجرام' };
+      console.warn('[Telegram] API error with HTML, trying plain text fallback:', data);
+      // Fallback: Send plain text if HTML parsing fails
+      const plainText = `استمارة طالبة جديدة: ${student.quad_name} - رمز: ${student.code} - هاتف: ${student.phone || student.parent_phone}`;
+      const fallbackRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: plainText
+        })
+      });
+      const fallbackData = await fallbackRes.json();
+      return {
+        success: fallbackData.ok,
+        message: fallbackData.ok ? 'تم الإرسال بنجاح' : (fallbackData.description || 'فشل إرسال التيليجرام')
+      };
     }
   } catch (err) {
-    console.error('Network error sending telegram:', err);
+    console.error('[Telegram] Network error:', err);
     return { success: false, message: 'خطأ في الاتصال بخادم تيليجرام' };
   }
 }
@@ -62,26 +125,25 @@ export async function sendTelegramStudentNotification(student) {
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export async function sendTelegramTeacherNotification(teacher) {
-  const settings = getSettings();
-  const token = settings.telegramBotToken?.trim();
-  const chatId = settings.telegramChatId?.trim();
+  const { token, chatId, enabled } = await getTelegramCredentials();
 
-  if (!token || !chatId || settings.telegramEnabled === false) {
+  if (!token || !chatId || !enabled) {
+    console.warn('[Telegram] Skipped: Bot token or Chat ID not configured');
     return { success: false, message: 'إعدادات التيليجرام غير مفعلة أو غير مكتملة' };
   }
 
-  const messageText = `
+  const messageHtml = `
 🔔 <b>استمارة تسجيل كادر جديدة</b>
 🏫 <b>مدرسة المتفوقات الأولى للبنات</b>
 ━━━━━━━━━━━━━━━━━━
-👤 <b>الاسم الرباعي:</b> ${teacher.quad_name || '-'}
-🏷️ <b>الرمز الإلكتروني:</b> <code>${teacher.code || '-'}</code>
-📋 <b>الصفة الوظيفية:</b> ${teacher.staff_category || 'تدريسي'} - ${teacher.job_title || '-'}
-📚 <b>التخصص / المادة:</b> ${teacher.general_specialization || teacher.specific_specialization || '-'}
-🎓 <b>التحصيل الدراسي:</b> ${teacher.academic_degree || '-'}
-📞 <b>رقم الهاتف:</b> <code>${teacher.phone || '-'}</code>
-🆔 <b>الرقم الوطني / الهوية:</b> ${teacher.national_id || teacher.id_number || '-'}
-📍 <b>السكن:</b> ${teacher.province || 'بغداد'} - ${teacher.district || '-'} - ${teacher.neighborhood || '-'}
+👤 <b>الاسم الرباعي:</b> ${escapeHtml(teacher.quad_name)}
+🏷️ <b>الرمز الإلكتروني:</b> <code>${escapeHtml(teacher.code)}</code>
+📋 <b>الصفة الوظيفية:</b> ${escapeHtml(teacher.staff_category || 'تدريسي')} - ${escapeHtml(teacher.job_title)}
+📚 <b>التخصص / المادة:</b> ${escapeHtml(teacher.teaching_subject || teacher.specialization || teacher.general_specialization)}
+🎓 <b>التحصيل الدراسي:</b> ${escapeHtml(teacher.degree || teacher.academic_degree)}
+📞 <b>رقم الهاتف:</b> <code>${escapeHtml(teacher.phone)}</code>
+🆔 <b>الرقم الوطني / الهوية:</b> <code>${escapeHtml(teacher.national_id || teacher.id_number)}</code>
+📍 <b>السكن:</b> ${escapeHtml(teacher.province || 'بغداد')} - ${escapeHtml(teacher.district)} - ${escapeHtml(teacher.neighborhood)}
 ━━━━━━━━━━━━━━━━━━
 ⏰ <i>تاريخ الإضافة: ${new Date().toLocaleString('ar-IQ')}</i>
 `.trim();
@@ -93,20 +155,21 @@ export async function sendTelegramTeacherNotification(teacher) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: messageText,
+        text: messageHtml,
         parse_mode: 'HTML'
       })
     });
 
     const data = await response.json();
     if (data.ok) {
+      console.log('[Telegram] Teacher notification sent successfully');
       return { success: true, message: 'تم إرسال إشعار التيليجرام بنجاح' };
     } else {
-      console.warn('Telegram API error:', data);
+      console.warn('[Telegram] API error:', data);
       return { success: false, message: data.description || 'فشل إرسال رسالة التيليجرام' };
     }
   } catch (err) {
-    console.error('Network error sending teacher telegram:', err);
+    console.error('[Telegram] Network error:', err);
     return { success: false, message: 'خطأ في الاتصال بخادم تيليجرام' };
   }
 }
@@ -125,7 +188,7 @@ export async function testTelegramConnection(token, chatId) {
 ✅ <b>اختبار اتصال بوت نظام مدرسة المتفوقات الأولى للبنات</b>
 ━━━━━━━━━━━━━━━━━━
 تم ربط البوت بنجاح بنظام استمارات الطلاب!
-ستصلك إشعارات الطالبات الجدد هنا تلقائياً فور تسجيلهن.
+ستصلك إشعارات الطالبات والموظفين الجدد هنا تلقائياً فور تسجيلهم.
 ⏰ <i>التاريخ: ${new Date().toLocaleString('ar-IQ')}</i>
 `.trim();
 

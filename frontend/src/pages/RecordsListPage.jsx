@@ -96,6 +96,10 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
 
   useEffect(() => {
     fetchRecords();
+    // Auto-sync with cloud on mount so any new registrations immediately appear
+    studentService.syncWithCloud().then(() => {
+      fetchRecords();
+    }).catch(() => {});
   }, [fetchRecords]);
 
   // Reset page when filters or tab change

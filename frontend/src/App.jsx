@@ -15,6 +15,8 @@ import TeacherPrintA4 from './components/print/TeacherPrintA4';
 import EditRecordModal from './components/common/EditRecordModal';
 import SettingsModal from './components/common/SettingsModal';
 import { getUser, studentService, teacherService } from './services/api';
+import { subscribeToNewStudents, subscribeToNewTeachers } from './services/firebaseService';
+import { playNotificationChime, requestNotificationPermission, showDesktopNotification } from './utils/notificationSound';
 import './styles/main.css';
 
 export default function App() {
@@ -23,11 +25,107 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [user, setUser] = useState(getUser());
   const [toasts, setToasts] = useState([]);
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('emis_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   // Selected records for details / print / edit
   const [currentRecord, setCurrentRecord] = useState(null);
   const [currentRecordType, setCurrentRecordType] = useState('student');
   const [editModalData, setEditModalData] = useState({ isOpen: false, record: null, type: 'student' });
+
+  // Persist notifications to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('emis_notifications', JSON.stringify(notifications.slice(0, 35)));
+    } catch (e) {}
+  }, [notifications]);
+
+  // Real-time Firestore Subscriptions for new student & staff submissions
+  useEffect(() => {
+    if (!user) return;
+
+    // Smoothly request desktop permission if supported
+    requestNotificationPermission().catch(() => {});
+
+    // Listen for new student registrations
+    const unsubStudents = subscribeToNewStudents((student) => {
+      // 1. Play chime sound
+      playNotificationChime();
+
+      // 2. Desktop notification
+      showDesktopNotification(
+        '🎓 استمارة طالبة جديدة!',
+        `تم تسجيل: ${student.quad_name || 'طالبة جديدة'} (${student.grade || 'الأول متوسط'})`,
+        () => handleViewRecord(student.code || student.id, 'student')
+      );
+
+      // 3. Add to notifications center list
+      const notif = {
+        id: 'stu-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        title: `طالبة جديدة: ${student.quad_name}`,
+        message: `${student.grade || 'الأول متوسط'} (${student.section || 'أ'}) - الرمز: ${student.code}`,
+        type: 'student',
+        record: student,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+      setNotifications((prev) => [notif, ...prev]);
+
+      // 4. Show live toast
+      addToast(
+        `تم تسجيل: ${student.quad_name} (${student.grade || 'طالبة'}) - الرمز: ${student.code}`,
+        'success',
+        '🔔 استمارة طالبة جديدة!'
+      );
+    });
+
+    // Listen for new staff/teacher additions
+    const unsubTeachers = subscribeToNewTeachers((teacher) => {
+      playNotificationChime();
+
+      showDesktopNotification(
+        '👩‍🏫 استمارة كادر جديدة!',
+        `تمت إضافة: ${teacher.quad_name || 'موظف/معلم'} (${teacher.job_title || ''})`,
+        () => handleViewRecord(teacher.code || teacher.id, 'teacher')
+      );
+
+      const notif = {
+        id: 'tea-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        title: `كادر جديد: ${teacher.quad_name}`,
+        message: `${teacher.staff_category || 'تدريسي'} - ${teacher.job_title || ''} - الرمز: ${teacher.code}`,
+        type: 'teacher',
+        record: teacher,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+      setNotifications((prev) => [notif, ...prev]);
+
+      addToast(
+        `تمت إضافة: ${teacher.quad_name} (${teacher.job_title || ''})`,
+        'info',
+        '🔔 تسجيل كادر جديد!'
+      );
+    });
+
+    return () => {
+      unsubStudents();
+      unsubTeachers();
+    };
+  }, [user]);
+
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+  };
 
   const addToast = (message, type = 'info', title = '') => {
     const id = Date.now() + Math.random();
@@ -122,6 +220,10 @@ export default function App() {
         setCurrentView={setCurrentView}
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        notifications={notifications}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onClearAllNotifications={handleClearAllNotifications}
+        onViewRecord={(id, type) => handleViewRecord(id, type)}
       />
 
       {/* Main Content Area */}

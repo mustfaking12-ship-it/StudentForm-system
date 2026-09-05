@@ -2,8 +2,10 @@ import * as XLSX from 'xlsx';
 import { 
   syncStudentToCloud, 
   fetchStudentsFromCloud, 
+  fetchStudentByIdFromCloud,
   syncTeacherToCloud, 
   fetchTeachersFromCloud, 
+  fetchTeacherByIdFromCloud,
   deleteRecordFromCloud 
 } from './firebaseService';
 import { sendTelegramStudentNotification, sendTelegramTeacherNotification } from './telegramService';
@@ -346,14 +348,28 @@ export async function getStudentById(idOrCode) {
   if (found) {
     return { success: true, data: found };
   }
+
+  // Fallback: check Cloud Firestore
+  try {
+    const cloudStudent = await fetchStudentByIdFromCloud(idOrCode);
+    if (cloudStudent) {
+      await putInStore(STUDENTS_STORE, LS_STUDENTS_KEY, cloudStudent);
+      return { success: true, data: cloudStudent };
+    }
+  } catch (e) {
+    console.warn('Error fetching student from cloud:', e.message);
+  }
+
   return { success: false, message: 'سجل الطالبة غير موجود' };
 }
 
 export async function createStudent(data) {
   const all = await getAllFromStore(STUDENTS_STORE, LS_STUDENTS_KEY, INITIAL_STUDENTS);
   const newId = Date.now();
-  const nextNum = all.length + 1;
-  const code = `STU-${String(nextNum).padStart(6, '0')}`;
+  
+  // Generate unique 6-digit collision-proof code
+  const codeSuffix = String(newId).slice(-6);
+  const code = data.code || `STU-${codeSuffix}`;
 
   const newStudent = {
     ...data,
@@ -365,15 +381,23 @@ export async function createStudent(data) {
   // 1. Save locally to IndexedDB
   await putInStore(STUDENTS_STORE, LS_STUDENTS_KEY, newStudent);
 
-  // 2. Sync to Cloud (Firestore) if configured
-  syncStudentToCloud(newStudent).catch((e) => console.warn('Cloud sync error:', e));
+  // 2. Sync to Cloud (Firestore) - await to ensure it writes to cloud
+  const cloudSynced = await syncStudentToCloud(newStudent).catch((e) => {
+    console.warn('[Storage] Cloud sync failed:', e.message);
+    return false;
+  });
 
-  // 3. Send Telegram Notification if configured
-  sendTelegramStudentNotification(newStudent).catch((e) => console.warn('Telegram notification error:', e));
+  // 3. Send Telegram Notification
+  const telegramRes = await sendTelegramStudentNotification(newStudent).catch((e) => {
+    console.warn('[Storage] Telegram notification error:', e.message);
+    return { success: false, message: e.message };
+  });
 
   return {
     success: true,
     data: newStudent,
+    cloudSynced: !!cloudSynced,
+    telegramSent: !!telegramRes?.success,
     message: 'تم تسجيل قيد الطالبة بنجاح'
   };
 }
@@ -487,14 +511,28 @@ export async function getTeacherById(idOrCode) {
   if (found) {
     return { success: true, data: found };
   }
+
+  // Fallback: check Cloud Firestore
+  try {
+    const cloudTeacher = await fetchTeacherByIdFromCloud(idOrCode);
+    if (cloudTeacher) {
+      await putInStore(TEACHERS_STORE, LS_TEACHERS_KEY, cloudTeacher);
+      return { success: true, data: cloudTeacher };
+    }
+  } catch (e) {
+    console.warn('Error fetching teacher from cloud:', e.message);
+  }
+
   return { success: false, message: 'سجل الموظف/المدرس غير موجود' };
 }
 
 export async function createTeacher(data) {
   const all = await getAllFromStore(TEACHERS_STORE, LS_TEACHERS_KEY, INITIAL_TEACHERS);
   const newId = Date.now();
-  const nextNum = all.length + 1;
-  const code = `TEA-${String(nextNum).padStart(6, '0')}`;
+  
+  // Generate unique 6-digit collision-proof code
+  const codeSuffix = String(newId).slice(-6);
+  const code = data.code || `TEA-${codeSuffix}`;
 
   const newTeacher = {
     ...data,
@@ -503,15 +541,26 @@ export async function createTeacher(data) {
     created_at: new Date().toISOString()
   };
 
+  // 1. Save locally
   await putInStore(TEACHERS_STORE, LS_TEACHERS_KEY, newTeacher);
-  syncTeacherToCloud(newTeacher).catch((e) => console.warn('Cloud sync error:', e));
 
-  // Send Telegram Notification for Teacher/Staff
-  sendTelegramTeacherNotification(newTeacher).catch((e) => console.warn('Telegram teacher notification error:', e));
+  // 2. Sync to Cloud
+  const cloudSynced = await syncTeacherToCloud(newTeacher).catch((e) => {
+    console.warn('[Storage] Teacher cloud sync failed:', e.message);
+    return false;
+  });
+
+  // 3. Send Telegram Notification for Teacher/Staff
+  const telegramRes = await sendTelegramTeacherNotification(newTeacher).catch((e) => {
+    console.warn('[Storage] Teacher Telegram error:', e.message);
+    return { success: false, message: e.message };
+  });
 
   return {
     success: true,
     data: newTeacher,
+    cloudSynced: !!cloudSynced,
+    telegramSent: !!telegramRes?.success,
     message: 'تم إضافة السجل بنجاح'
   };
 }
@@ -570,12 +619,28 @@ export async function checkTeacherDuplicate(data) {
 // ================= DASHBOARD STATS ================= //
 
 export async function getDashboardStats() {
+  // Sync in background to update local store with latest cloud data
+  try {
+    const [cloudStudents, cloudTeachers] = await Promise.all([
+      fetchStudentsFromCloud().catch(() => null),
+      fetchTeachersFromCloud().catch(() => null)
+    ]);
+    if (cloudStudents && cloudStudents.length > 0) {
+      await putManyInStore(STUDENTS_STORE, LS_STUDENTS_KEY, cloudStudents);
+    }
+    if (cloudTeachers && cloudTeachers.length > 0) {
+      await putManyInStore(TEACHERS_STORE, LS_TEACHERS_KEY, cloudTeachers);
+    }
+  } catch (e) {
+    // continue with local data
+  }
+
   const students = await getAllFromStore(STUDENTS_STORE, LS_STUDENTS_KEY, INITIAL_STUDENTS);
   const teachers = await getAllFromStore(TEACHERS_STORE, LS_TEACHERS_KEY, INITIAL_TEACHERS);
 
   const totalStudents = students.length;
-  const teachingStaff = teachers.filter((t) => t.staff_category === 'تدريسي');
-  const otherStaff = teachers.filter((t) => t.staff_category !== 'تدريسي');
+  const teachingStaff = teachers.filter((t) => (t.staff_category || 'تدريسي') === 'تدريسي');
+  const otherStaff = teachers.filter((t) => t.staff_category && t.staff_category !== 'تدريسي');
   const totalTeachers = teachingStaff.length;
   const totalStaff = otherStaff.length;
   const totalTeachersStaff = teachers.length;
@@ -583,11 +648,15 @@ export async function getDashboardStats() {
 
   const studentFemales = students.filter((s) => s.gender === 'أنثى' || !s.gender).length;
   const studentMales = students.filter((s) => s.gender === 'ذكر').length;
-  const staffFemales = teachers.filter((t) => t.gender === 'أنثى').length;
+  const staffFemales = teachers.filter((t) => (t.gender || 'أنثى') === 'أنثى').length;
   const staffMales = teachers.filter((t) => t.gender === 'ذكر').length;
 
   const totalFemales = studentFemales + staffFemales;
   const totalMales = studentMales + staffMales;
+
+  const studentSpecialNeeds = students.filter((s) => s.has_special_needs && s.has_special_needs != 0).length;
+  const staffSpecialNeeds = teachers.filter((t) => t.has_special_needs && t.has_special_needs != 0).length;
+  const totalSpecialNeeds = studentSpecialNeeds + staffSpecialNeeds;
 
   // Grade breakdown
   const gradeMap = {};
@@ -604,6 +673,14 @@ export async function getDashboardStats() {
     catMap[c] = (catMap[c] || 0) + 1;
   });
   const staffByCategory = Object.entries(catMap).map(([staff_category, count]) => ({ staff_category, count }));
+
+  // Staff by Employment Type
+  const empMap = {};
+  teachers.forEach((t) => {
+    const e = t.employment_type || 'ملاك دائم';
+    empMap[e] = (empMap[e] || 0) + 1;
+  });
+  const staffByEmploymentType = Object.entries(empMap).map(([employment_type, count]) => ({ employment_type, count }));
 
   // Recent records
   const recentStudents = [...students]
@@ -626,17 +703,19 @@ export async function getDashboardStats() {
       totalTeachersStaff,
       totalMales,
       totalFemales,
+      totalSpecialNeeds,
       genderBreakdown: {
         students: { male: studentMales, female: studentFemales },
         staff: { male: staffMales, female: staffFemales }
       },
       specialNeeds: {
-        students: students.filter((s) => s.has_special_needs).length,
-        staff: teachers.filter((t) => t.has_special_needs).length,
-        total: students.filter((s) => s.has_special_needs).length + teachers.filter((t) => t.has_special_needs).length
+        students: studentSpecialNeeds,
+        staff: staffSpecialNeeds,
+        total: totalSpecialNeeds
       },
       studentsByGrade,
       staffByCategory,
+      staffByEmploymentType,
       recentStudents,
       recentStaff
     }
@@ -907,4 +986,5 @@ export async function syncAllWithCloud() {
     };
   }
 }
+
 
