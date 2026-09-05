@@ -57,8 +57,8 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
         };
         const res = await studentService.getAll(params);
         if (res.success) {
-          setRecords(res.data);
-          setPagination(res.pagination);
+          setRecords(res.data || []);
+          setPagination(res.pagination || { page: 1, limit: 15, total: res.data?.length || 0, totalPages: 1 });
         }
       } else {
         const params = {
@@ -70,8 +70,8 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
         };
         const res = await teacherService.getAll(params);
         if (res.success) {
-          setRecords(res.data);
-          setPagination(res.pagination);
+          setRecords(res.data || []);
+          setPagination(res.pagination || { page: 1, limit: 15, total: res.data?.length || 0, totalPages: 1 });
         }
       }
     } catch (err) {
@@ -128,14 +128,14 @@ export default function RecordsListPage({ onViewRecord, onEditRecord, onPrintRec
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <a
-            href={importExportService.getExportUrl(activeTab === 'students' ? 'students' : 'teachers', 'xlsx')}
+          <button
+            type="button"
+            onClick={() => importExportService.exportExcel(activeTab === 'students' ? 'students' : 'teachers')}
             className="btn btn-sm btn-secondary"
-            download
           >
             <FileSpreadsheet size={16} />
             تصدير إلى Excel
-          </a>
+          </button>
 
           <button
             type="button"

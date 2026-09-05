@@ -127,11 +127,7 @@ export const uploadService = {
 
 // Import / Export Service
 export const importExportService = {
-  getExportUrl: (type, format) => {
-    // Direct trigger export
-    exportToExcel(type);
-    return '#';
-  },
+  getExportUrl: (type, format) => '#',
   exportExcel: (type) => exportToExcel(type),
   preview: async (file, targetType) => parseExcelPreview(file, targetType),
   commit: (rows, targetType, skipDuplicates = true) => commitExcelImport(rows, targetType, skipDuplicates),

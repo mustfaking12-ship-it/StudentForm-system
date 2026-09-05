@@ -6,7 +6,7 @@ import {
   fetchTeachersFromCloud, 
   deleteRecordFromCloud 
 } from './firebaseService';
-import { sendTelegramStudentNotification } from './telegramService';
+import { sendTelegramStudentNotification, sendTelegramTeacherNotification } from './telegramService';
 
 const DB_NAME = 'SchoolEMIS_DB';
 const DB_VERSION = 1;
@@ -256,15 +256,38 @@ export async function getStudents(params = {}) {
     filtered = filtered.filter((s) => s.section === params.section);
   }
 
+  if (params.study_stage) {
+    filtered = filtered.filter((s) => s.study_stage === params.study_stage);
+  }
+
+  if (params.student_status) {
+    filtered = filtered.filter((s) => s.student_status === params.student_status);
+  }
+
+  if (params.gender) {
+    filtered = filtered.filter((s) => s.gender === params.gender);
+  }
+
   // Sort by ID / created_at desc
   filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
 
+  const total = filtered.length;
+  const page = parseInt(params.page) || 1;
+  const limit = parseInt(params.limit) || 15;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const startIndex = (page - 1) * limit;
+  const paginated = filtered.slice(startIndex, startIndex + limit);
+
   return {
     success: true,
-    data: filtered,
-    total: filtered.length,
-    page: parseInt(params.page) || 1,
-    limit: parseInt(params.limit) || 20
+    data: paginated,
+    total,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages
+    }
   };
 }
 
@@ -389,12 +412,29 @@ export async function getTeachers(params = {}) {
     filtered = filtered.filter((t) => t.staff_category === params.staff_category);
   }
 
+  if (params.gender) {
+    filtered = filtered.filter((t) => t.gender === params.gender);
+  }
+
   filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+
+  const total = filtered.length;
+  const page = parseInt(params.page) || 1;
+  const limit = parseInt(params.limit) || 15;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const startIndex = (page - 1) * limit;
+  const paginated = filtered.slice(startIndex, startIndex + limit);
 
   return {
     success: true,
-    data: filtered,
-    total: filtered.length
+    data: paginated,
+    total,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages
+    }
   };
 }
 
@@ -422,6 +462,9 @@ export async function createTeacher(data) {
 
   await putInStore(TEACHERS_STORE, LS_TEACHERS_KEY, newTeacher);
   syncTeacherToCloud(newTeacher).catch((e) => console.warn('Cloud sync error:', e));
+
+  // Send Telegram Notification for Teacher/Staff
+  sendTelegramTeacherNotification(newTeacher).catch((e) => console.warn('Telegram teacher notification error:', e));
 
   return {
     success: true,

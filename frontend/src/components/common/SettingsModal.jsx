@@ -47,6 +47,9 @@ export default function SettingsModal({ isOpen, onClose, onSaveSuccess }) {
     try {
       const res = await testTelegramConnection(settings.telegramBotToken, settings.telegramChatId);
       setTelegramStatus(res);
+      if (res.success) {
+        saveSettings(settings);
+      }
     } catch (err) {
       setTelegramStatus({ success: false, message: err.message || 'فشل الاتصال بتيليجرام' });
     } finally {

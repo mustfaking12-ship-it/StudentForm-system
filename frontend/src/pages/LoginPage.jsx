@@ -4,8 +4,8 @@ import Modal from '../components/common/Modal';
 import { authService } from '../services/api';
 
 export default function LoginPage({ isOpen, onClose, onLoginSuccess }) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -76,9 +76,10 @@ export default function LoginPage({ isOpen, onClose, onLoginSuccess }) {
             className="form-control"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="admin"
+            placeholder="اسم المستخدم"
             required
             autoFocus
+            autoComplete="username"
           />
         </div>
 
@@ -94,16 +95,8 @@ export default function LoginPage({ isOpen, onClose, onLoginSuccess }) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
+            autoComplete="current-password"
           />
-        </div>
-
-        {/* Quick Demo Credentials Info */}
-        <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '0.75rem', borderRadius: '8px', fontSize: '0.82rem', color: '#475569', marginBottom: '1.5rem' }}>
-          <div><strong>بيانات الدخول التجريبية المعدة مسبقاً:</strong></div>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '4px' }}>
-            <span>المدير: <code>admin</code> / <code>admin123</code></span>
-            <span>الموظف: <code>staff</code> / <code>staff123</code></span>
-          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
